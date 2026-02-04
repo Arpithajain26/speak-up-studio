@@ -4,11 +4,14 @@ import { useVideoRecording } from '@/hooks/useVideoRecording';
 import { analyzeSpeech } from '@/utils/speechAnalysis';
 import { savePracticeSession } from '@/utils/progressStorage';
 import { uploadPracticeVideo, savePracticeSessionToCloud } from '@/utils/videoStorage';
+import { analyzeBodyLanguage } from '@/utils/bodyLanguageAnalysis';
 import { SpeechAnalysis } from '@/types/fluency';
+import { BodyLanguageFeedback } from '@/types/bodyLanguage';
 import { RecordButton } from '@/components/RecordButton';
 import { SoundWave } from '@/components/SoundWave';
 import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 import { FeedbackCard } from '@/components/FeedbackCard';
+import { BodyLanguageFeedbackCard } from '@/components/BodyLanguageFeedback';
 import { VideoPreview } from '@/components/VideoPreview';
 import { VideoPlayback } from '@/components/VideoPlayback';
 import { Button } from '@/components/ui/button';
@@ -18,7 +21,9 @@ import { toast } from '@/hooks/use-toast';
 
 const Practice = () => {
   const [analysis, setAnalysis] = useState<SpeechAnalysis | null>(null);
+  const [bodyLanguageFeedback, setBodyLanguageFeedback] = useState<BodyLanguageFeedback | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAnalyzingBodyLanguage, setIsAnalyzingBodyLanguage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cloudVideoUrl, setCloudVideoUrl] = useState<string | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -58,7 +63,7 @@ const Practice = () => {
         : 0;
       
       // Small delay to ensure final transcript is captured
-      setTimeout(() => {
+      setTimeout(async () => {
         const finalTranscript = transcript + interimTranscript;
         
         if (finalTranscript.trim().length < 10) {
@@ -95,6 +100,7 @@ const Practice = () => {
     } else {
       // Start recording
       setAnalysis(null);
+      setBodyLanguageFeedback(null);
       setCloudVideoUrl(null);
       resetTranscript();
       resetRecording();
@@ -105,6 +111,38 @@ const Practice = () => {
       startListening();
     }
   }, [isRecording, stopRecording, stopListening, startRecording, startListening, resetTranscript, resetRecording, transcript, interimTranscript]);
+
+  const handleAnalyzeBodyLanguage = useCallback(async () => {
+    if (!recordedBlob) return;
+    
+    setIsAnalyzingBodyLanguage(true);
+    
+    try {
+      const feedback = await analyzeBodyLanguage(recordedBlob);
+      if (feedback) {
+        setBodyLanguageFeedback(feedback);
+        toast({
+          title: 'Body language analyzed!',
+          description: `Your body language score is ${feedback.overallScore}%`,
+        });
+      } else {
+        toast({
+          title: 'Analysis failed',
+          description: 'Could not analyze body language. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('Body language analysis error:', err);
+      toast({
+        title: 'Error',
+        description: 'An error occurred during analysis.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAnalyzingBodyLanguage(false);
+    }
+  }, [recordedBlob]);
 
   const handleSaveToCloud = useCallback(async () => {
     if (!recordedBlob || !analysis) return;
@@ -150,6 +188,7 @@ const Practice = () => {
 
   const handleReset = useCallback(() => {
     setAnalysis(null);
+    setBodyLanguageFeedback(null);
     setCloudVideoUrl(null);
     resetTranscript();
     resetRecording();
@@ -257,12 +296,12 @@ const Practice = () => {
                 <h3 className="font-semibold">Your Recording</h3>
                 <VideoPlayback videoUrl={cloudVideoUrl || recordedVideoUrl!} />
                 
-                {!cloudVideoUrl && (
-                  <div className="flex justify-center">
+                <div className="flex justify-center gap-3">
+                  {!cloudVideoUrl && (
                     <Button 
                       onClick={handleSaveToCloud} 
                       disabled={isSaving}
-                      className="gradient-hero text-primary-foreground"
+                      variant="outline"
                     >
                       {isSaving ? (
                         <>
@@ -276,10 +315,25 @@ const Practice = () => {
                         </>
                       )}
                     </Button>
-                  </div>
-                )}
+                  )}
+                  
+                  {!bodyLanguageFeedback && !isAnalyzingBodyLanguage && (
+                    <Button 
+                      onClick={handleAnalyzeBodyLanguage}
+                      className="gradient-hero text-primary-foreground"
+                    >
+                      Analyze Body Language
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
+
+            {/* Body Language Feedback */}
+            <BodyLanguageFeedbackCard 
+              feedback={bodyLanguageFeedback} 
+              isAnalyzing={isAnalyzingBodyLanguage} 
+            />
 
             <FeedbackCard analysis={analysis} />
 
