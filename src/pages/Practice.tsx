@@ -1,4 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useVideoRecording } from '@/hooks/useVideoRecording';
 import { analyzeSpeech } from '@/utils/speechAnalysis';
@@ -20,6 +22,8 @@ import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
 const Practice = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
   const [analysis, setAnalysis] = useState<SpeechAnalysis | null>(null);
   const [bodyLanguageFeedback, setBodyLanguageFeedback] = useState<BodyLanguageFeedback | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -27,6 +31,12 @@ const Practice = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [cloudVideoUrl, setCloudVideoUrl] = useState<string | null>(null);
   const startTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
   
   const {
     isListening,
@@ -145,13 +155,13 @@ const Practice = () => {
   }, [recordedBlob]);
 
   const handleSaveToCloud = useCallback(async () => {
-    if (!recordedBlob || !analysis) return;
+    if (!recordedBlob || !analysis || !user) return;
     
     setIsSaving(true);
     
     try {
       // Upload video to cloud
-      const videoUrl = await uploadPracticeVideo(recordedBlob);
+      const videoUrl = await uploadPracticeVideo(recordedBlob, user.id);
       
       if (videoUrl) {
         setCloudVideoUrl(videoUrl);
@@ -161,7 +171,7 @@ const Practice = () => {
           ? (Date.now() - startTimeRef.current) / 1000
           : 0;
         
-        await savePracticeSessionToCloud(videoUrl, analysis, duration);
+        await savePracticeSessionToCloud(videoUrl, analysis, duration, user.id);
         
         toast({
           title: 'Saved to cloud!',
@@ -184,7 +194,7 @@ const Practice = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [recordedBlob, analysis]);
+  }, [recordedBlob, analysis, user]);
 
   const handleReset = useCallback(() => {
     setAnalysis(null);
@@ -194,6 +204,18 @@ const Practice = () => {
     resetRecording();
     startTimeRef.current = null;
   }, [resetTranscript, resetRecording]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect via useEffect
+  }
 
   if (!speechSupported || !videoSupported) {
     return (

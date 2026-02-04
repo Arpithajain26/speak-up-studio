@@ -2,9 +2,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { SpeechAnalysis } from '@/types/fluency';
 import { Json } from '@/integrations/supabase/types';
 
-export const uploadPracticeVideo = async (blob: Blob): Promise<string | null> => {
+export const uploadPracticeVideo = async (blob: Blob, userId: string): Promise<string | null> => {
   try {
-    const fileName = `practice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.webm`;
+    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.webm`;
     
     const { data, error } = await supabase.storage
       .from('practice-videos')
@@ -32,12 +32,14 @@ export const uploadPracticeVideo = async (blob: Blob): Promise<string | null> =>
 export const savePracticeSessionToCloud = async (
   videoUrl: string | null,
   analysis: SpeechAnalysis,
-  duration: number
+  duration: number,
+  userId: string
 ) => {
   try {
     const { data, error } = await supabase
       .from('practice_sessions')
       .insert([{
+        user_id: userId,
         video_url: videoUrl,
         transcript: analysis.transcript,
         duration: Math.round(duration),

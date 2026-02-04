@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { getUserStats, getDailyProgress, getRecentSessions } from '@/utils/progressStorage';
 import { UserStats, DailyProgress, PracticeSession } from '@/types/fluency';
 import { StatsOverview } from '@/components/StatsOverview';
@@ -7,9 +8,11 @@ import { ProgressChart } from '@/components/ProgressChart';
 import { ScoreCircle } from '@/components/ScoreCircle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Mic, ChevronRight, Sparkles, BookOpen, Target } from 'lucide-react';
+import { Mic, ChevronRight, Sparkles, BookOpen, Target, LogIn, LogOut, User } from 'lucide-react';
 
 const Index = () => {
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [progress, setProgress] = useState<DailyProgress[]>([]);
   const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
@@ -20,10 +23,45 @@ const Index = () => {
     setRecentSessions(getRecentSessions(5));
   }, []);
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   const hasData = stats && stats.totalSessions > 0;
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="container py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Mic className="w-6 h-6 text-primary" />
+            <span className="font-display font-bold text-lg">SpeakEasy</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {loading ? null : user ? (
+              <>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline">{user.email}</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline" size="sm">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-10" />
@@ -46,17 +84,26 @@ const Index = () => {
             and track your daily improvement.
           </p>
           
-          <Link to="/practice">
-            <Button size="lg" className="gradient-hero text-primary-foreground shadow-glow hover:opacity-90 transition-opacity">
-              <Mic className="w-5 h-5 mr-2" />
-              Start Practice Session
-            </Button>
-          </Link>
+          {user ? (
+            <Link to="/practice">
+              <Button size="lg" className="gradient-hero text-primary-foreground shadow-glow hover:opacity-90 transition-opacity">
+                <Mic className="w-5 h-5 mr-2" />
+                Start Practice Session
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/auth">
+              <Button size="lg" className="gradient-hero text-primary-foreground shadow-glow hover:opacity-90 transition-opacity">
+                <LogIn className="w-5 h-5 mr-2" />
+                Sign In to Start Practicing
+              </Button>
+            </Link>
+          )}
         </div>
       </section>
 
       <main className="container pb-16 space-y-8">
-        {hasData ? (
+        {hasData && user ? (
           <>
             {/* Stats Overview */}
             <section>
@@ -110,16 +157,27 @@ const Index = () => {
                 </div>
                 <h2 className="text-2xl font-display font-semibold">Ready to improve?</h2>
                 <p className="text-muted-foreground">
-                  Complete your first practice session to start tracking your progress.
+                  {user 
+                    ? 'Complete your first practice session to start tracking your progress.'
+                    : 'Sign in to start tracking your speaking progress and save your sessions.'}
                 </p>
               </div>
 
-              <Link to="/practice">
-                <Button size="lg" className="gradient-hero text-primary-foreground">
-                  <Mic className="w-5 h-5 mr-2" />
-                  Start Your First Session
-                </Button>
-              </Link>
+              {user ? (
+                <Link to="/practice">
+                  <Button size="lg" className="gradient-hero text-primary-foreground">
+                    <Mic className="w-5 h-5 mr-2" />
+                    Start Your First Session
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/auth">
+                  <Button size="lg" className="gradient-hero text-primary-foreground">
+                    <LogIn className="w-5 h-5 mr-2" />
+                    Sign In to Get Started
+                  </Button>
+                </Link>
+              )}
             </div>
           </section>
         )}
