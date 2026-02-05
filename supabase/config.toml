@@ -1,1 +1,10 @@
 project_id = "vttjwifvabptdydvdjsn"
+
+[functions.analyze-body-language]
+verify_jwt = false
+
+[functions.analyze-speech]
+verify_jwt = false
+
+[functions.student-chat]
+verify_jwt = false

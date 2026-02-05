@@ -9,25 +9,31 @@ import { uploadPracticeVideo, savePracticeSessionToCloud } from '@/utils/videoSt
 import { analyzeBodyLanguage } from '@/utils/bodyLanguageAnalysis';
 import { SpeechAnalysis } from '@/types/fluency';
 import { BodyLanguageFeedback } from '@/types/bodyLanguage';
+import { AIWordAnalysis } from '@/types/speechAnalysis';
 import { RecordButton } from '@/components/RecordButton';
 import { SoundWave } from '@/components/SoundWave';
 import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 import { FeedbackCard } from '@/components/FeedbackCard';
 import { BodyLanguageFeedbackCard } from '@/components/BodyLanguageFeedback';
+import { WordAnalysisCard } from '@/components/WordAnalysisCard';
+import { StudentChatbot } from '@/components/StudentChatbot';
 import { VideoPreview } from '@/components/VideoPreview';
 import { VideoPlayback } from '@/components/VideoPlayback';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, RefreshCw, AlertCircle, Upload, Loader2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertCircle, Upload, Loader2, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Practice = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [analysis, setAnalysis] = useState<SpeechAnalysis | null>(null);
   const [bodyLanguageFeedback, setBodyLanguageFeedback] = useState<BodyLanguageFeedback | null>(null);
+  const [wordAnalysis, setWordAnalysis] = useState<AIWordAnalysis | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzingBodyLanguage, setIsAnalyzingBodyLanguage] = useState(false);
+  const [isAnalyzingWords, setIsAnalyzingWords] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cloudVideoUrl, setCloudVideoUrl] = useState<string | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -111,6 +117,7 @@ const Practice = () => {
       // Start recording
       setAnalysis(null);
       setBodyLanguageFeedback(null);
+      setWordAnalysis(null);
       setCloudVideoUrl(null);
       resetTranscript();
       resetRecording();
@@ -153,6 +160,39 @@ const Practice = () => {
       setIsAnalyzingBodyLanguage(false);
     }
   }, [recordedBlob]);
+
+  const handleAnalyzeWords = useCallback(async () => {
+    if (!analysis?.transcript) return;
+    
+    setIsAnalyzingWords(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-speech', {
+        body: { transcript: analysis.transcript }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setWordAnalysis(data as AIWordAnalysis);
+        toast({
+          title: 'Word analysis complete!',
+          description: `Found ${data.repeatedWords?.length || 0} repeated word patterns.`,
+        });
+      }
+    } catch (err) {
+      console.error('Word analysis error:', err);
+      toast({
+        title: 'Analysis failed',
+        description: 'Could not analyze word patterns. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAnalyzingWords(false);
+    }
+  }, [analysis?.transcript]);
 
   const handleSaveToCloud = useCallback(async () => {
     if (!recordedBlob || !analysis || !user) return;
@@ -199,6 +239,7 @@ const Practice = () => {
   const handleReset = useCallback(() => {
     setAnalysis(null);
     setBodyLanguageFeedback(null);
+    setWordAnalysis(null);
     setCloudVideoUrl(null);
     resetTranscript();
     resetRecording();
@@ -359,6 +400,25 @@ const Practice = () => {
 
             <FeedbackCard analysis={analysis} />
 
+            {/* AI Word Analysis Button */}
+            {!wordAnalysis && !isAnalyzingWords && (
+              <div className="flex justify-center">
+                <Button 
+                  onClick={handleAnalyzeWords}
+                  className="gradient-accent text-accent-foreground"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Analyze Word Patterns with AI
+                </Button>
+              </div>
+            )}
+
+            {/* Word Analysis Results */}
+            <WordAnalysisCard 
+              analysis={wordAnalysis} 
+              isAnalyzing={isAnalyzingWords} 
+            />
+
             {/* Transcript Review */}
             <div className="bg-card border border-border rounded-xl p-4">
               <h3 className="font-semibold mb-3">What you said:</h3>
@@ -381,6 +441,9 @@ const Practice = () => {
           </div>
         )}
       </main>
+
+      {/* Student Chatbot */}
+      <StudentChatbot />
     </div>
   );
 };
