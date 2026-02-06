@@ -2,21 +2,38 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserStats, getDailyProgress, getPracticeSessions } from '@/utils/progressStorage';
+import { getRecentCloudSessions } from '@/utils/videoStorage';
 import { UserStats, DailyProgress, PracticeSession } from '@/types/fluency';
 import { StatsOverview } from '@/components/StatsOverview';
 import { ProgressChart } from '@/components/ProgressChart';
 import { StreakCalendar } from '@/components/StreakCalendar';
 import { ScoreCircle } from '@/components/ScoreCircle';
+import { VideoPlayback } from '@/components/VideoPlayback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
   Mic, 
   ChevronRight, 
+  ChevronDown,
   ArrowLeft, 
   Calendar,
   TrendingUp,
-  LayoutDashboard
+  LayoutDashboard,
+  Video,
+  VideoOff
 } from 'lucide-react';
+
+interface CloudSession {
+  id: string;
+  created_at: string;
+  video_url: string | null;
+  transcript: string | null;
+  duration: number | null;
+  fluency_score: number | null;
+  grammar_score: number | null;
+  overall_score: number | null;
+  words_per_minute: number | null;
+}
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
@@ -25,6 +42,8 @@ const Dashboard = () => {
   const [progress, setProgress] = useState<DailyProgress[]>([]);
   const [allSessions, setAllSessions] = useState<PracticeSession[]>([]);
   const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
+  const [cloudSessions, setCloudSessions] = useState<CloudSession[]>([]);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -36,13 +55,24 @@ const Dashboard = () => {
     const sessions = getPracticeSessions();
     setAllSessions(sessions);
     setStats(getUserStats());
-    setProgress(getDailyProgress(14)); // 2 weeks of progress
+    setProgress(getDailyProgress(14));
     setRecentSessions(
       sessions
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5)
     );
   }, []);
+
+  // Fetch cloud sessions with videos
+  useEffect(() => {
+    const fetchCloudSessions = async () => {
+      const sessions = await getRecentCloudSessions(20);
+      setCloudSessions(sessions as CloudSession[]);
+    };
+    if (user) {
+      fetchCloudSessions();
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -117,8 +147,102 @@ const Dashboard = () => {
           </section>
         )}
 
-        {/* Recent Sessions */}
-        {recentSessions.length > 0 && (
+        {/* Recorded Sessions with Videos */}
+        {cloudSessions.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Video className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-display font-semibold">Recorded Sessions</h2>
+            </div>
+            <div className="space-y-3">
+              {cloudSessions.map((session) => (
+                <Card key={session.id} className="shadow-card hover:shadow-lg transition-shadow overflow-hidden">
+                  <button
+                    className="w-full p-4 text-left"
+                    onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <ScoreCircle score={session.overall_score ?? 0} label="" size="sm" />
+                        <div>
+                          <p className="font-medium">
+                            {new Date(session.created_at).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {session.duration ? `${Math.floor(session.duration / 60)}m ${session.duration % 60}s` : '—'} • {session.words_per_minute ?? 0} WPM
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {session.video_url ? (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full flex items-center gap-1">
+                            <Video className="w-3 h-3" />
+                            Video
+                          </span>
+                        ) : (
+                          <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full flex items-center gap-1">
+                            <VideoOff className="w-3 h-3" />
+                            No video
+                          </span>
+                        )}
+                        <div className="text-right hidden sm:block">
+                          <p className="text-sm font-medium">Fluency: {session.fluency_score ?? 0}%</p>
+                          <p className="text-sm text-muted-foreground">Grammar: {session.grammar_score ?? 0}%</p>
+                        </div>
+                        {expandedSession === session.id ? (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                  
+                  {expandedSession === session.id && (
+                    <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
+                      {session.video_url ? (
+                        <VideoPlayback videoUrl={session.video_url} />
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No video recorded for this session.
+                        </p>
+                      )}
+                      {session.transcript && (
+                        <div className="bg-muted/50 rounded-xl p-4">
+                          <p className="text-sm font-medium mb-1">Transcript</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {session.transcript}
+                          </p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-muted/50 rounded-xl p-3 text-center">
+                          <p className="text-lg font-bold text-primary">{session.fluency_score ?? 0}%</p>
+                          <p className="text-xs text-muted-foreground">Fluency</p>
+                        </div>
+                        <div className="bg-muted/50 rounded-xl p-3 text-center">
+                          <p className="text-lg font-bold text-primary">{session.grammar_score ?? 0}%</p>
+                          <p className="text-xs text-muted-foreground">Grammar</p>
+                        </div>
+                        <div className="bg-muted/50 rounded-xl p-3 text-center">
+                          <p className="text-lg font-bold text-primary">{session.words_per_minute ?? 0}</p>
+                          <p className="text-xs text-muted-foreground">WPM</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Local Recent Sessions (without video) */}
+        {recentSessions.length > 0 && cloudSessions.length === 0 && (
           <section>
             <h2 className="text-xl font-display font-semibold mb-4">Recent Sessions</h2>
             <div className="space-y-3">
