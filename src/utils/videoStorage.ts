@@ -85,3 +85,32 @@ export const getRecentCloudSessions = async (limit = 10) => {
     return [];
   }
 };
+
+export const deleteCloudSession = async (sessionId: string, videoUrl: string | null) => {
+  try {
+    // Delete the video from storage if it exists
+    if (videoUrl) {
+      const url = new URL(videoUrl);
+      const pathParts = url.pathname.split('/storage/v1/object/public/practice-videos/');
+      if (pathParts[1]) {
+        await supabase.storage.from('practice-videos').remove([pathParts[1]]);
+      }
+    }
+
+    // Delete the session record
+    const { error } = await supabase
+      .from('practice_sessions')
+      .delete()
+      .eq('id', sessionId);
+
+    if (error) {
+      console.error('Error deleting session:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Failed to delete session:', err);
+    return false;
+  }
+};
