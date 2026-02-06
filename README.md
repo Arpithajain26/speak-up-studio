@@ -71,24 +71,16 @@ End-to-end product development and iteration
 🌍 Support for multiple languages
 
 📂 Project Setup
-
-Clone the repository:
-
+Clone the repository
 git clone https://github.com/Arpithajain26/speak-up-studio.git
 
-
-Navigate to the project directory:
-
+Navigate to the project directory
 cd speak-up-studio
 
-
-Install dependencies:
-
+Install dependencies
 npm install
 
-
-Run the project:
-
+Run the project
 npm start
 
 🤝 Contributing
