@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserStats, getDailyProgress, getPracticeSessions } from '@/utils/progressStorage';
@@ -9,6 +9,7 @@ import { ProgressChart } from '@/components/ProgressChart';
 import { StreakCalendar } from '@/components/StreakCalendar';
 import { ScoreCircle } from '@/components/ScoreCircle';
 import { VideoPlayback } from '@/components/VideoPlayback';
+import { SessionFilters, SessionFilterValues, defaultFilters } from '@/components/SessionFilters';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -58,7 +59,34 @@ const Dashboard = () => {
   const [cloudSessions, setCloudSessions] = useState<CloudSession[]>([]);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<SessionFilterValues>(defaultFilters);
   const { toast } = useToast();
+
+  const filteredCloudSessions = useMemo(() => {
+    return cloudSessions.filter((session) => {
+      const sessionDate = new Date(session.created_at);
+
+      if (filters.dateFrom) {
+        const from = new Date(filters.dateFrom);
+        from.setHours(0, 0, 0, 0);
+        if (sessionDate < from) return false;
+      }
+      if (filters.dateTo) {
+        const to = new Date(filters.dateTo);
+        to.setHours(23, 59, 59, 999);
+        if (sessionDate > to) return false;
+      }
+
+      if (filters.minScore > 0 && (session.overall_score ?? 0) < filters.minScore) {
+        return false;
+      }
+
+      if (filters.videoFilter === 'with-video' && !session.video_url) return false;
+      if (filters.videoFilter === 'without-video' && session.video_url) return false;
+
+      return true;
+    });
+  }, [cloudSessions, filters]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -182,8 +210,19 @@ const Dashboard = () => {
               <Video className="w-5 h-5 text-primary" />
               <h2 className="text-xl font-display font-semibold">Recorded Sessions</h2>
             </div>
-            <div className="space-y-3">
-              {cloudSessions.map((session) => (
+            <SessionFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              totalCount={cloudSessions.length}
+              filteredCount={filteredCloudSessions.length}
+            />
+            <div className="space-y-3 mt-4">
+              {filteredCloudSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">No sessions match your filters.</p>
+                </div>
+              ) : (
+              filteredCloudSessions.map((session) => (
                 <Card key={session.id} className="shadow-card hover:shadow-lg transition-shadow overflow-hidden">
                   <button
                     className="w-full p-4 text-left"
@@ -295,7 +334,8 @@ const Dashboard = () => {
                     </div>
                   )}
                 </Card>
-              ))}
+              ))
+              )}
             </div>
           </section>
         )}
