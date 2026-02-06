@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserStats, getDailyProgress, getPracticeSessions } from '@/utils/progressStorage';
-import { getRecentCloudSessions } from '@/utils/videoStorage';
+import { getRecentCloudSessions, deleteCloudSession } from '@/utils/videoStorage';
 import { UserStats, DailyProgress, PracticeSession } from '@/types/fluency';
 import { StatsOverview } from '@/components/StatsOverview';
 import { ProgressChart } from '@/components/ProgressChart';
@@ -11,6 +11,18 @@ import { ScoreCircle } from '@/components/ScoreCircle';
 import { VideoPlayback } from '@/components/VideoPlayback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Mic, 
   ChevronRight, 
@@ -20,7 +32,8 @@ import {
   TrendingUp,
   LayoutDashboard,
   Video,
-  VideoOff
+  VideoOff,
+  Trash2
 } from 'lucide-react';
 
 interface CloudSession {
@@ -44,12 +57,27 @@ const Dashboard = () => {
   const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
   const [cloudSessions, setCloudSessions] = useState<CloudSession[]>([]);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  const handleDeleteSession = async (session: CloudSession) => {
+    setDeletingId(session.id);
+    const success = await deleteCloudSession(session.id, session.video_url);
+    setDeletingId(null);
+    if (success) {
+      setCloudSessions(prev => prev.filter(s => s.id !== session.id));
+      if (expandedSession === session.id) setExpandedSession(null);
+      toast({ title: 'Session deleted', description: 'The recorded session has been removed.' });
+    } else {
+      toast({ title: 'Delete failed', description: 'Could not delete the session. Please try again.', variant: 'destructive' });
+    }
+  };
 
   useEffect(() => {
     const sessions = getPracticeSessions();
@@ -232,6 +260,37 @@ const Dashboard = () => {
                           <p className="text-lg font-bold text-primary">{session.words_per_minute ?? 0}</p>
                           <p className="text-xs text-muted-foreground">WPM</p>
                         </div>
+                      </div>
+                      <div className="flex justify-end pt-2">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={deletingId === session.id}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              {deletingId === session.id ? 'Deleting…' : 'Delete Session'}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the recording and all associated data. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteSession(session)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   )}
