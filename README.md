@@ -82,6 +82,7 @@ npm install
 
 Run the project
 npm start
+live demo :https://speakupstudio-6sgjy0ffj-arpithaammujain39-9555s-projects.vercel.app/
 
 🤝 Contributing
 
