@@ -8,7 +8,7 @@ import { ProgressChart } from '@/components/ProgressChart';
 import { ScoreCircle } from '@/components/ScoreCircle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Mic, ChevronRight, Sparkles, BookOpen, Target, LogIn, LogOut, User, LayoutDashboard } from 'lucide-react';
+import { Mic, ChevronRight, Sparkles, BookOpen, Target, LogIn, LogOut, User, LayoutDashboard, MessageSquare } from 'lucide-react';
 
 const Index = () => {
   const { user, loading, signOut } = useAuth();
@@ -87,12 +87,20 @@ const Index = () => {
           </p>
           
           {user ? (
-            <Link to="/practice">
-              <Button size="lg" className="gradient-hero text-primary-foreground shadow-glow hover:opacity-90 transition-opacity">
-                <Mic className="w-5 h-5 mr-2" />
-                Start Practice Session
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link to="/practice">
+                <Button size="lg" className="gradient-hero text-primary-foreground shadow-glow hover:opacity-90 transition-opacity">
+                  <Mic className="w-5 h-5 mr-2" />
+                  Start Practice Session
+                </Button>
+              </Link>
+              <Link to="/interview">
+                <Button size="lg" variant="outline" className="border-primary/30 hover:bg-primary/5">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Interview Prep
+                </Button>
+              </Link>
+            </div>
           ) : (
             <Link to="/auth">
               <Button size="lg" className="gradient-hero text-primary-foreground shadow-glow hover:opacity-90 transition-opacity">
@@ -185,7 +193,7 @@ const Index = () => {
         )}
 
         {/* Features Section */}
-        <section className="grid md:grid-cols-3 gap-4 pt-8">
+        <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 pt-8">
           {[
             {
               icon: Mic,
@@ -196,6 +204,11 @@ const Index = () => {
               icon: BookOpen,
               title: 'Grammar Check',
               description: 'Identify and correct common grammar mistakes',
+            },
+            {
+              icon: MessageSquare,
+              title: 'Interview Prep',
+              description: 'Practice with an AI interviewer across tech categories',
             },
             {
               icon: Target,
