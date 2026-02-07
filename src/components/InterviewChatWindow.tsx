@@ -1,11 +1,14 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatMessage } from '@/types/speechAnalysis';
 import { InterviewMessage } from '@/components/InterviewMessage';
+import { InterviewVideoRecorder } from '@/components/InterviewVideoRecorder';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
-import { Send, Loader2, RotateCcw, Volume2 } from 'lucide-react';
+import { useVideoRecording } from '@/hooks/useVideoRecording';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { Send, Loader2, RotateCcw, Volume2, Video } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { InterviewCategory } from '@/hooks/useInterviewChat';
 
@@ -35,9 +38,30 @@ export const InterviewChatWindow = ({
 }: InterviewChatWindowProps) => {
   const [input, setInput] = useState('');
   const [autoSpeak, setAutoSpeak] = useState(true);
+  const [isRecordingMode, setIsRecordingMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { speak, stop, isSpeaking, isSupported: ttsSupported } = useTextToSpeech();
   const lastSpokenRef = useRef<number>(-1);
+
+  const {
+    isRecording,
+    videoStream,
+    startRecording: startVideoRecording,
+    stopRecording: stopVideoRecording,
+    resetRecording,
+    error: videoError,
+  } = useVideoRecording();
+
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    startListening,
+    stopListening,
+    resetTranscript,
+    isSupported: sttSupported,
+    error: sttError,
+  } = useSpeechRecognition();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -56,7 +80,6 @@ export const InterviewChatWindow = ({
 
     if (lastAssistantIdx > lastSpokenRef.current && messages[lastAssistantIdx]?.role === 'assistant') {
       lastSpokenRef.current = lastAssistantIdx;
-      // Small delay to let streaming finish
       const timer = setTimeout(() => {
         speak(messages[lastAssistantIdx].content);
       }, 500);
@@ -64,11 +87,58 @@ export const InterviewChatWindow = ({
     }
   }, [messages, isLoading, autoSpeak, ttsSupported, speak]);
 
+  const handleStartRecording = useCallback(async () => {
+    stop(); // Stop any ongoing TTS
+    setIsRecordingMode(true);
+    resetTranscript();
+    await startVideoRecording();
+    startListening();
+  }, [stop, startVideoRecording, startListening, resetTranscript]);
+
+  const handleStopRecording = useCallback(() => {
+    stopVideoRecording();
+    stopListening();
+  }, [stopVideoRecording, stopListening]);
+
+  const handleSendRecordedAnswer = useCallback(async () => {
+    if (!transcript.trim()) {
+      toast({
+        title: 'No speech detected',
+        description: 'Please record your answer again — make sure to speak clearly.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const answer = transcript.trim();
+    resetRecording();
+    resetTranscript();
+    setIsRecordingMode(false);
+
+    try {
+      await onSendAnswer(answer);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send message',
+        variant: 'destructive',
+      });
+    }
+  }, [transcript, onSendAnswer, resetRecording, resetTranscript]);
+
+  const handleCancelRecording = useCallback(() => {
+    stopVideoRecording();
+    stopListening();
+    resetRecording();
+    resetTranscript();
+    setIsRecordingMode(false);
+  }, [stopVideoRecording, stopListening, resetRecording, resetTranscript]);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
     const answer = input;
     setInput('');
-    stop(); // Stop any ongoing speech
+    stop();
 
     try {
       await onSendAnswer(answer);
@@ -147,26 +217,59 @@ export const InterviewChatWindow = ({
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-4 border-t">
-        <div className="flex gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your answer... (Shift+Enter for new line)"
-            disabled={isLoading}
-            className="flex-1 min-h-[60px] max-h-[150px] resize-none"
-            rows={2}
+      <div className="p-4 border-t space-y-3">
+        {/* Video Recording Mode */}
+        {isRecordingMode && (
+          <InterviewVideoRecorder
+            isRecording={isRecording || isListening}
+            videoStream={videoStream}
+            transcript={transcript}
+            interimTranscript={interimTranscript}
+            onStartRecording={handleStartRecording}
+            onStopRecording={handleStopRecording}
+            onSendTranscript={handleSendRecordedAnswer}
+            onCancel={handleCancelRecording}
+            isLoading={isLoading}
+            error={videoError || sttError}
           />
-          <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            size="icon"
-            className="gradient-hero text-primary-foreground self-end h-10 w-10"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
+        )}
+
+        {/* Text Input + Record Toggle */}
+        {!isRecordingMode && (
+          <div className="flex gap-2">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your answer... (Shift+Enter for new line)"
+              disabled={isLoading}
+              className="flex-1 min-h-[60px] max-h-[150px] resize-none"
+              rows={2}
+            />
+            <div className="flex flex-col gap-1.5 self-end">
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                size="icon"
+                className="gradient-hero text-primary-foreground h-10 w-10"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+              {sttSupported && (
+                <Button
+                  onClick={handleStartRecording}
+                  disabled={isLoading}
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10"
+                  title="Record video answer"
+                >
+                  <Video className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
