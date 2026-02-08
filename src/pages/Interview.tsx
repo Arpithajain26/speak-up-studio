@@ -5,11 +5,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useInterviewChat, InterviewCategory } from '@/hooks/useInterviewChat';
 import { InterviewCategoryPicker } from '@/components/InterviewCategoryPicker';
 import { InterviewChatWindow } from '@/components/InterviewChatWindow';
+import { InterviewVerdict } from '@/components/InterviewVerdict';
 import { Mic, ArrowLeft, LogIn } from 'lucide-react';
 
 const Interview = () => {
   const { user, loading } = useAuth();
-  const { messages, isLoading, category, startInterview, sendAnswer, resetInterview } = useInterviewChat();
+  const { messages, isLoading, category, verdict, startInterview, sendAnswer, endInterview, resetInterview } = useInterviewChat();
 
   const hasStarted = messages.length > 0;
 
@@ -63,7 +64,9 @@ const Interview = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        {!hasStarted && !isLoading ? (
+        {verdict ? (
+          <InterviewVerdict verdict={verdict} onNewInterview={resetInterview} />
+        ) : !hasStarted && !isLoading ? (
           <div className="container py-8 flex-1 flex items-center justify-center">
             <div className="w-full max-w-3xl">
               <InterviewCategoryPicker onSelect={handleCategorySelect} />
@@ -76,6 +79,7 @@ const Interview = () => {
               isLoading={isLoading}
               category={category}
               onSendAnswer={sendAnswer}
+              onEndInterview={endInterview}
               onReset={resetInterview}
             />
           </Card>

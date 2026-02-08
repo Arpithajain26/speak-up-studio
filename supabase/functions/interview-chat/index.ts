@@ -11,14 +11,20 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, category } = await req.json();
+    const { messages, category, endInterview } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Interview chat - category:", category, "messages:", messages?.length);
+    console.log("Interview chat - category:", category, "messages:", messages?.length, "endInterview:", endInterview);
+
+    // If ending the interview, add a special system message requesting a verdict
+    const verdictInstruction = endInterview ? [{
+      role: "user",
+      content: "The interview is now over. Please provide a FINAL VERDICT. Evaluate all my answers throughout this interview and give me:\n1. **Overall Performance Score** (out of 100)\n2. **Category-wise Scores** (Communication, Technical Knowledge, Problem Solving, Coding Skills if applicable)\n3. **Strengths** - What I did well\n4. **Areas for Improvement** - Where I need to work\n5. **Final Decision** - Clearly state either **'SELECTED'** or **'NOT SELECTED'** based on my overall performance\n6. **Recommendations** - Specific tips to improve\n\nBe honest and realistic like a real interviewer would be."
+    }] : [];
 
     const categoryPrompts: Record<string, string> = {
       behavioral: `Focus on behavioral interview questions using the STAR method (Situation, Task, Action, Result). Ask about leadership, teamwork, conflict resolution, time management, and problem-solving experiences. Examples: "Tell me about a time you had to deal with a difficult team member", "Describe a situation where you failed and what you learned."`,
@@ -74,7 +80,8 @@ EVALUATION:
 
 START: Begin by introducing yourself as the interviewer, mention the interview category, and ask your first question. Keep it natural and conversational.`
           },
-          ...messages
+          ...messages,
+          ...verdictInstruction
         ],
         stream: true,
       }),
