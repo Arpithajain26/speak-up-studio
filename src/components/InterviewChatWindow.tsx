@@ -5,10 +5,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatMessage } from '@/types/speechAnalysis';
 import { InterviewMessage } from '@/components/InterviewMessage';
 import { InterviewVideoRecorder } from '@/components/InterviewVideoRecorder';
+import { CodeEditor } from '@/components/CodeEditor';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useVideoRecording } from '@/hooks/useVideoRecording';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { Send, Loader2, RotateCcw, Volume2, Video } from 'lucide-react';
+import { Send, Loader2, RotateCcw, Volume2, Video, Code, Square } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { InterviewCategory } from '@/hooks/useInterviewChat';
 
@@ -17,6 +18,7 @@ interface InterviewChatWindowProps {
   isLoading: boolean;
   category: InterviewCategory;
   onSendAnswer: (answer: string) => Promise<void>;
+  onEndInterview: () => Promise<void>;
   onReset: () => void;
 }
 
@@ -34,11 +36,13 @@ export const InterviewChatWindow = ({
   isLoading,
   category,
   onSendAnswer,
+  onEndInterview,
   onReset,
 }: InterviewChatWindowProps) => {
   const [input, setInput] = useState('');
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [isRecordingMode, setIsRecordingMode] = useState(false);
+  const [isCodeMode, setIsCodeMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { speak, stop, isSpeaking, isSupported: ttsSupported } = useTextToSpeech();
   const lastSpokenRef = useRef<number>(-1);
@@ -158,6 +162,34 @@ export const InterviewChatWindow = ({
     }
   };
 
+  const handleCodeSubmit = useCallback(async (code: string, language: string) => {
+    const formattedAnswer = `\`\`\`${language}\n${code}\n\`\`\``;
+    setIsCodeMode(false);
+    stop();
+    try {
+      await onSendAnswer(formattedAnswer);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send code',
+        variant: 'destructive',
+      });
+    }
+  }, [onSendAnswer, stop]);
+
+  const handleEndInterview = useCallback(async () => {
+    stop();
+    try {
+      await onEndInterview();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to get verdict',
+        variant: 'destructive',
+      });
+    }
+  }, [onEndInterview, stop]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -168,7 +200,7 @@ export const InterviewChatWindow = ({
           </h3>
           <p className="text-xs text-muted-foreground">Answer questions as you would in a real interview</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {ttsSupported && (
             <Button
               variant={autoSpeak ? 'default' : 'outline'}
@@ -183,9 +215,21 @@ export const InterviewChatWindow = ({
               {autoSpeak ? 'Audio On' : 'Audio Off'}
             </Button>
           )}
+          {messages.length >= 2 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleEndInterview}
+              disabled={isLoading}
+            >
+              <Square className="w-3 h-3 mr-1" />
+              End Interview
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onReset}>
             <RotateCcw className="w-3 h-3 mr-1" />
-            New Interview
+            New
           </Button>
         </div>
       </div>
@@ -218,8 +262,23 @@ export const InterviewChatWindow = ({
 
       {/* Input */}
       <div className="p-4 border-t space-y-3">
+        {/* Code Editor Mode */}
+        {isCodeMode && (
+          <div className="space-y-2">
+            <CodeEditor onSubmitCode={handleCodeSubmit} isLoading={isLoading} />
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => setIsCodeMode(false)}
+            >
+              Back to text input
+            </Button>
+          </div>
+        )}
+
         {/* Video Recording Mode */}
-        {isRecordingMode && (
+        {isRecordingMode && !isCodeMode && (
           <InterviewVideoRecorder
             isRecording={isRecording || isListening}
             videoStream={videoStream}
@@ -234,8 +293,8 @@ export const InterviewChatWindow = ({
           />
         )}
 
-        {/* Text Input + Record Toggle */}
-        {!isRecordingMode && (
+        {/* Text Input + Record Toggle + Code Toggle */}
+        {!isRecordingMode && !isCodeMode && (
           <div className="flex gap-2">
             <Textarea
               value={input}
@@ -254,6 +313,16 @@ export const InterviewChatWindow = ({
                 className="gradient-hero text-primary-foreground h-10 w-10"
               >
                 <Send className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => setIsCodeMode(true)}
+                disabled={isLoading}
+                variant="outline"
+                size="icon"
+                className="h-10 w-10"
+                title="Open code editor"
+              >
+                <Code className="w-4 h-4" />
               </Button>
               {sttSupported && (
                 <Button

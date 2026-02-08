@@ -9,6 +9,7 @@ export const useInterviewChat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [category, setCategory] = useState<InterviewCategory>('mixed');
+  const [verdict, setVerdict] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const startInterview = useCallback(async (selectedCategory: InterviewCategory) => {
@@ -181,9 +182,87 @@ export const useInterviewChat = () => {
     }
   }, [messages, isLoading, category]);
 
+  const endInterview = useCallback(async () => {
+    if (isLoading || messages.length < 2) return;
+    setIsLoading(true);
+
+    let assistantContent = '';
+
+    try {
+      abortRef.current = new AbortController();
+
+      const currentMessages = messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const response = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: currentMessages,
+          category,
+          endInterview: true,
+        }),
+        signal: abortRef.current.signal,
+      });
+
+      if (!response.ok) throw new Error('Failed to get verdict');
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+              setVerdict(assistantContent);
+            }
+          } catch {
+            buffer = line + '\n' + buffer;
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Interview verdict error:', error);
+        throw error;
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages, isLoading, category]);
+
   const resetInterview = useCallback(() => {
     if (abortRef.current) abortRef.current.abort();
     setMessages([]);
+    setVerdict(null);
     setIsLoading(false);
   }, []);
 
@@ -191,8 +270,10 @@ export const useInterviewChat = () => {
     messages,
     isLoading,
     category,
+    verdict,
     startInterview,
     sendAnswer,
+    endInterview,
     resetInterview,
   };
 };
