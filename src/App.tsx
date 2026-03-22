@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Interview from "./pages/Interview";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
