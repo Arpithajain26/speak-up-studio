@@ -13,7 +13,6 @@ import { Send, Loader2, RotateCcw, Volume2, Video, Code, Square } from 'lucide-r
 import { toast } from '@/hooks/use-toast';
 import { InterviewCategory } from '@/hooks/useInterviewChat';
 import interviewerAvatar from '@/assets/interviewer-priya.jpg';
-import { InterviewCategory } from '@/hooks/useInterviewChat';
 
 interface InterviewChatWindowProps {
   messages: ChatMessage[];
