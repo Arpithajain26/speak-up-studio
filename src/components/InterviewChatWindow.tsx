@@ -12,6 +12,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { Send, Loader2, RotateCcw, Volume2, Video, Code, Square } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { InterviewCategory } from '@/hooks/useInterviewChat';
+import interviewerAvatar from '@/assets/interviewer-priya.jpg';
 
 interface InterviewChatWindowProps {
   messages: ChatMessage[];
@@ -193,13 +194,23 @@ export const InterviewChatWindow = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* Header with Interviewer */}
       <div className="flex items-center justify-between p-4 border-b bg-primary/5">
-        <div>
-          <h3 className="font-display font-semibold text-sm">
-            Mock Interview — {categoryLabels[category]}
-          </h3>
-          <p className="text-xs text-muted-foreground">Answer questions as you would in a real interview</p>
+        <div className="flex items-center gap-3">
+          <img
+            src={interviewerAvatar}
+            alt="Interviewer Priya"
+            className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/30 shadow-sm"
+          />
+          <div>
+            <h3 className="font-display font-semibold text-sm">
+              Priya — {categoryLabels[category]}
+            </h3>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-xs text-muted-foreground">Online • Ready to interview</p>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {ttsSupported && (
@@ -250,11 +261,16 @@ export const InterviewChatWindow = ({
           ))}
           {isLoading && messages[messages.length - 1]?.role === 'user' && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              </div>
+              <img
+                src={interviewerAvatar}
+                alt="Priya thinking"
+                className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-primary/20 shadow-sm"
+              />
               <div className="bg-secondary rounded-2xl px-4 py-3">
-                <p className="text-sm text-muted-foreground">Evaluating your answer...</p>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground italic">Priya is thinking...</p>
+                </div>
               </div>
             </div>
           )}

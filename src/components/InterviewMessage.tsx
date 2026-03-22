@@ -1,7 +1,8 @@
 import { ChatMessage } from '@/types/speechAnalysis';
-import { Bot, User, Volume2, VolumeX } from 'lucide-react';
+import { User, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
+import interviewerAvatar from '@/assets/interviewer-priya.jpg';
 
 interface InterviewMessageProps {
   message: ChatMessage;
@@ -22,14 +23,21 @@ export const InterviewMessage = ({
 
   return (
     <div className={`flex gap-3 ${!isAssistant ? 'flex-row-reverse' : ''}`}>
-      <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-          isAssistant ? 'bg-primary/10 text-primary' : 'bg-primary text-primary-foreground'
-        }`}
-      >
-        {isAssistant ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
-      </div>
+      {isAssistant ? (
+        <img
+          src={interviewerAvatar}
+          alt="Interviewer Priya"
+          className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-primary/20 shadow-sm"
+        />
+      ) : (
+        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-primary text-primary-foreground">
+          <User className="w-4 h-4" />
+        </div>
+      )}
       <div className="max-w-[85%] space-y-1">
+        {isAssistant && (
+          <span className="text-[11px] font-medium text-muted-foreground ml-1">Priya — Interviewer</span>
+        )}
         <div
           className={`rounded-2xl px-4 py-3 ${
             isAssistant ? 'bg-secondary' : 'bg-primary text-primary-foreground'
