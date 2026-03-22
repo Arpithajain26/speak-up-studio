@@ -9,8 +9,9 @@ interface InterviewVerdictProps {
 }
 
 export const InterviewVerdict = ({ verdict, onNewInterview }: InterviewVerdictProps) => {
-  const isSelected = verdict.toLowerCase().includes('selected') && !verdict.toLowerCase().includes('not selected');
-  const hasNotSelected = verdict.toLowerCase().includes('not selected') || verdict.toLowerCase().includes('rejected');
+  const verdictLower = verdict.toLowerCase();
+  const hasNotSelected = verdictLower.includes('not selected') || verdictLower.includes('rejected') || verdictLower.includes('not eligible');
+  const isSelected = (verdictLower.includes('selected') || verdictLower.includes('eligible')) && !hasNotSelected;
 
   const resultStatus = hasNotSelected ? 'not-selected' : isSelected ? 'selected' : 'pending';
 
