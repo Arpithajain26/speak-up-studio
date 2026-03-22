@@ -12,6 +12,8 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { Send, Loader2, RotateCcw, Volume2, Video, Code, Square } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { InterviewCategory } from '@/hooks/useInterviewChat';
+import interviewerAvatar from '@/assets/interviewer-priya.jpg';
+import { InterviewCategory } from '@/hooks/useInterviewChat';
 
 interface InterviewChatWindowProps {
   messages: ChatMessage[];
