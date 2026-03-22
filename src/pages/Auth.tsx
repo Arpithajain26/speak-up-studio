@@ -60,6 +60,30 @@ const Auth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (isForgotPassword) {
+      try {
+        emailSchema.parse(email);
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          toast({ title: 'Invalid email', description: err.errors[0].message, variant: 'destructive' });
+          return;
+        }
+      }
+      setIsSubmitting(true);
+      try {
+        const { error } = await resetPassword(email);
+        if (error) {
+          toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        } else {
+          toast({ title: 'Reset link sent!', description: 'Check your email for a password reset link.' });
+          setIsForgotPassword(false);
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     if (!validateForm()) return;
     
     setIsSubmitting(true);
@@ -72,16 +96,9 @@ const Auth = () => {
           if (error.message.includes('Invalid login credentials')) {
             message = 'Invalid email or password. Please try again.';
           }
-          toast({
-            title: 'Sign in failed',
-            description: message,
-            variant: 'destructive',
-          });
+          toast({ title: 'Sign in failed', description: message, variant: 'destructive' });
         } else {
-          toast({
-            title: 'Welcome back!',
-            description: 'You have signed in successfully.',
-          });
+          toast({ title: 'Welcome back!', description: 'You have signed in successfully.' });
           navigate('/');
         }
       } else {
@@ -91,16 +108,9 @@ const Auth = () => {
           if (error.message.includes('User already registered')) {
             message = 'An account with this email already exists. Please sign in instead.';
           }
-          toast({
-            title: 'Sign up failed',
-            description: message,
-            variant: 'destructive',
-          });
+          toast({ title: 'Sign up failed', description: message, variant: 'destructive' });
         } else {
-          toast({
-            title: 'Account created!',
-            description: 'Please check your email to verify your account.',
-          });
+          toast({ title: 'Account created!', description: 'Please check your email to verify your account.' });
         }
       }
     } finally {

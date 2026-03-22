@@ -26,6 +26,7 @@ const App = () => (
             <Route path="/practice" element={<Practice />} />
             <Route path="/interview" element={<Interview />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
