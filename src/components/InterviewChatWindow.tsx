@@ -24,11 +24,12 @@ interface InterviewChatWindowProps {
 
 const categoryLabels: Record<InterviewCategory, string> = {
   behavioral: 'Behavioral',
-  technical: 'Technical',
-  coding: 'Coding',
+  technical: 'Technical / OOPs',
+  coding: 'Coding / DSA',
   'system-design': 'System Design',
   hr: 'HR / General',
   mixed: 'Full Interview',
+  'mock-test': '🎯 Full Mock Test',
 };
 
 export const InterviewChatWindow = ({

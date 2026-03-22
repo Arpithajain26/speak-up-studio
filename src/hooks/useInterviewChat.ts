@@ -3,7 +3,7 @@ import { ChatMessage } from '@/types/speechAnalysis';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/interview-chat`;
 
-export type InterviewCategory = 'behavioral' | 'technical' | 'coding' | 'system-design' | 'hr' | 'mixed';
+export type InterviewCategory = 'behavioral' | 'technical' | 'coding' | 'system-design' | 'hr' | 'mixed' | 'mock-test';
 
 export const useInterviewChat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);

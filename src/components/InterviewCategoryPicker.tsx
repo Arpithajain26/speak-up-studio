@@ -1,12 +1,20 @@
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { InterviewCategory } from '@/hooks/useInterviewChat';
-import { Brain, Code, Server, Users, Briefcase, Shuffle } from 'lucide-react';
+import { Brain, Code, Server, Users, Briefcase, Shuffle, ClipboardCheck } from 'lucide-react';
 
 interface InterviewCategoryPickerProps {
   onSelect: (category: InterviewCategory) => void;
 }
 
-const categories: { id: InterviewCategory; label: string; description: string; icon: typeof Brain }[] = [
+const categories: { id: InterviewCategory; label: string; description: string; icon: typeof Brain; badge?: string }[] = [
+  {
+    id: 'mock-test',
+    label: 'Full Mock Test',
+    description: 'Complete interview simulation with real questions — OOPs, DSA, System Design, Coding, HR. Get a final eligibility verdict.',
+    icon: ClipboardCheck,
+    badge: 'Recommended',
+  },
   {
     id: 'behavioral',
     label: 'Behavioral',
@@ -15,14 +23,14 @@ const categories: { id: InterviewCategory; label: string; description: string; i
   },
   {
     id: 'technical',
-    label: 'Technical',
-    description: 'Data structures, algorithms, OOP, system concepts',
+    label: 'Technical / OOPs',
+    description: 'OOP concepts, SOLID principles, design patterns, data structures',
     icon: Brain,
   },
   {
     id: 'coding',
-    label: 'Coding',
-    description: 'Live coding problems with complexity analysis',
+    label: 'Coding / DSA',
+    description: 'Live coding problems — arrays, trees, DP, graphs with complexity analysis',
     icon: Code,
   },
   {
@@ -39,8 +47,8 @@ const categories: { id: InterviewCategory; label: string; description: string; i
   },
   {
     id: 'mixed',
-    label: 'Full Interview',
-    description: 'Mix of all categories like a real multi-round interview',
+    label: 'Random Mix',
+    description: 'Random mix of all categories',
     icon: Shuffle,
   },
 ];
@@ -50,21 +58,34 @@ export const InterviewCategoryPicker = ({ onSelect }: InterviewCategoryPickerPro
     <div className="space-y-4">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-display font-bold">Choose Interview Type</h2>
-        <p className="text-muted-foreground">Select a category to start your mock interview</p>
+        <p className="text-muted-foreground">Select a category or take the full mock test to get your eligibility verdict</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {categories.map((cat) => (
           <Card
             key={cat.id}
-            className="p-4 cursor-pointer shadow-card hover:shadow-lg transition-all hover:-translate-y-1 hover:border-primary/50 group"
+            className={`p-4 cursor-pointer shadow-card hover:shadow-lg transition-all hover:-translate-y-1 hover:border-primary/50 group ${
+              cat.id === 'mock-test' ? 'sm:col-span-2 lg:col-span-3 border-primary/30 bg-primary/5' : ''
+            }`}
             onClick={() => onSelect(cat.id)}
           >
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <div className={`p-2 rounded-lg transition-colors ${
+                cat.id === 'mock-test'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground'
+              }`}>
                 <cat.icon className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-display font-semibold text-sm">{cat.label}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display font-semibold text-sm">{cat.label}</h3>
+                  {cat.badge && (
+                    <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                      {cat.badge}
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{cat.description}</p>
               </div>
             </div>
