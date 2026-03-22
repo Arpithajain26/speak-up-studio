@@ -194,13 +194,23 @@ export const InterviewChatWindow = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* Header with Interviewer */}
       <div className="flex items-center justify-between p-4 border-b bg-primary/5">
-        <div>
-          <h3 className="font-display font-semibold text-sm">
-            Mock Interview — {categoryLabels[category]}
-          </h3>
-          <p className="text-xs text-muted-foreground">Answer questions as you would in a real interview</p>
+        <div className="flex items-center gap-3">
+          <img
+            src={interviewerAvatar}
+            alt="Interviewer Priya"
+            className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/30 shadow-sm"
+          />
+          <div>
+            <h3 className="font-display font-semibold text-sm">
+              Priya — {categoryLabels[category]}
+            </h3>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-xs text-muted-foreground">Online • Ready to interview</p>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {ttsSupported && (
