@@ -261,11 +261,16 @@ export const InterviewChatWindow = ({
           ))}
           {isLoading && messages[messages.length - 1]?.role === 'user' && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              </div>
+              <img
+                src={interviewerAvatar}
+                alt="Priya thinking"
+                className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-primary/20 shadow-sm"
+              />
               <div className="bg-secondary rounded-2xl px-4 py-3">
-                <p className="text-sm text-muted-foreground">Evaluating your answer...</p>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground italic">Priya is thinking...</p>
+                </div>
               </div>
             </div>
           )}
